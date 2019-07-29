@@ -1,13 +1,40 @@
 """Set product shipping classes."""
 
 import csv
-import itertools
 import sys
 
 import click
 from tabler import Tabler as Table
 
 from .woocommerce_export import WoocommerceExport
+
+
+class PackageTypes:
+    """Cloud Commerce Package Types."""
+
+    PACKET = "Packet"
+    LARGE_LETTER = "Large Letter"
+    LARGE_LETTER_SINGLE = "Large Letter (Single)"
+    HEAVY_AND_LARGE = "Heavy and Large"
+    COURIER = "Courier"
+    ALL = [PACKET, LARGE_LETTER, LARGE_LETTER_SINGLE, HEAVY_AND_LARGE, COURIER]
+
+
+class InternationalShipping:
+    """Cloud Commerce International Shipping."""
+
+    STANDARD = None
+    EXPRESS = "Express"
+    NO_INTERNATIONAL_SHIPPING = "No International Shipping"
+    ALL = [STANDARD, EXPRESS, NO_INTERNATIONAL_SHIPPING]
+
+
+class ShippingClasses:
+    """Woocommerce Shipping Classes."""
+
+    STANDARD = ""
+    HEAVY = "Heavy"
+    ALL = [STANDARD, HEAVY]
 
 
 class SetShippingClasses:
@@ -18,27 +45,6 @@ class SetShippingClasses:
     CC_PACKAGE_TYPE_COLUMN = "OPT_Package Type"
     CC_INTERNATIONAL_SHIPPING_COLUMN = "OPT_International Shipping"
 
-    COURIER = "Courier"
-    LARGE_LETTER = "Large Letter"
-    LARGE_LETTER_SINGLE = "Large Letter (Single)"
-    HEAVY_AND_LARGE = "Heavy and Large"
-    PACKET = "Packet"
-    STANDARD = "Standard"
-    EXPRESS = "Express"
-    NO_INTERNATIONAL_SHIPPING = "No International Shipping"
-
-    package_types = {
-        COURIER: COURIER,
-        LARGE_LETTER: LARGE_LETTER,
-        LARGE_LETTER_SINGLE: LARGE_LETTER,
-        HEAVY_AND_LARGE: HEAVY_AND_LARGE,
-        PACKET: PACKET,
-    }
-    international_shipping_types = {
-        STANDARD: STANDARD,
-        EXPRESS: EXPRESS,
-        NO_INTERNATIONAL_SHIPPING: NO_INTERNATIONAL_SHIPPING,
-    }
     OUTPUT_HEADER = [WoocommerceExport.ID, WoocommerceExport.SHIPPING_CLASS]
 
     def __init__(self, woo_export_path, cc_export_path):
@@ -46,38 +52,20 @@ class SetShippingClasses:
         self.WC_export = WoocommerceExport(woo_export_path)
         self.inventory = Table(cc_export_path)
         self.WC_export.rows = [r for r in self.WC_export if r[WoocommerceExport.SKU]]
-        self.existing_shipping_classes = set(
-            [
-                _
-                for _ in self.WC_export.get_column(WoocommerceExport.SHIPPING_CLASS)
-                if _
-            ]
-        )
-        self.shipping_classes = self.get_shipping_classes()
-        product_shipping_classes = self.product_shipping_classes()
+        self.shipping_class_lookup = self.product_shipping_classes()
         missing_skus = [
             SKU
             for SKU in self.WC_export.get_column(WoocommerceExport.SKU)
-            if SKU not in product_shipping_classes
+            if SKU not in self.shipping_class_lookup
         ]
         if missing_skus:
             click.echo(missing_skus, err=True)
             raise Exception(
                 "Products in Woocommerce could not be matched to Cloud Commerce products"
             )
-        output_data = self.output_data(product_shipping_classes)
+        output_data = self.output_data()
         self.write_status(output_data)
         self.write_output(output_data)
-
-    @classmethod
-    def get_shipping_classes(cls):
-        """Return a list of valid shipping classes."""
-        package_types = set(cls.package_types.values())
-        international_shipping_types = set(cls.international_shipping_types.values())
-        shipping_class_combinations = list(
-            itertools.product(package_types, international_shipping_types)
-        )
-        return [cls.format_shipping_class_name(*_) for _ in shipping_class_combinations]
 
     @staticmethod
     def format_shipping_class_name(package_type, international_shipping):
@@ -87,42 +75,39 @@ class SetShippingClasses:
     def get_package_type_for_row(self, row):
         """Return the package type for a Cloud Commerce Product Export row."""
         SKU = row[self.CC_SKU_COLUMN]
-        row_package_type = row[self.CC_PACKAGE_TYPE_COLUMN]
-        if not row_package_type:
+        package_type = row[self.CC_PACKAGE_TYPE_COLUMN]
+        if not package_type:
             raise Exception(f'No Package type set for "{SKU}"')
-        try:
-            return self.package_types[row_package_type]
-        except IndexError:
-            raise Exception(
-                f'Unrecognized package type: "{row_package_type}" for product "{SKU}"'
-            )
+        return package_type
 
     def get_international_shipping_for_row(self, row):
         """Return the international shipping for a Cloud Commerce Product Export row."""
         SKU = row[self.CC_SKU_COLUMN]
-        row_international_shipping = row[self.CC_INTERNATIONAL_SHIPPING_COLUMN]
-        if not row_international_shipping:
+        international_shipping = row[self.CC_INTERNATIONAL_SHIPPING_COLUMN]
+        if not international_shipping:
             raise Exception(f'No International Shipping set for "{SKU}"')
-        try:
-            return self.international_shipping_types[row_international_shipping]
-        except IndexError:
-            raise Exception(
-                (
-                    "Unrecognized International Shipping: "
-                    f'"{row_international_shipping}" for product "{SKU}"'
-                )
-            )
+        return international_shipping
 
     def get_shipping_class_for_row(self, row):
         """Return the shipping class for a Cloud Commerce Product Export row."""
         package_type = self.get_package_type_for_row(row)
         international_shipping = self.get_international_shipping_for_row(row)
-        shipping_class_name = self.format_shipping_class_name(
-            package_type, international_shipping
-        )
-        if shipping_class_name not in self.shipping_classes:
-            raise Exception(f'Invalid shipping class "{shipping_class_name}".')
-        return shipping_class_name
+        return self.get_shipping_class(package_type, international_shipping)
+
+    @staticmethod
+    def get_shipping_class(package_type, international_shipping):
+        """Return the appropriate shipping class for a package type and international shipping."""
+        heavy_package_types = [PackageTypes.HEAVY_AND_LARGE, PackageTypes.COURIER]
+        heavy_international_shipping = [
+            InternationalShipping.EXPRESS,
+            InternationalShipping.NO_INTERNATIONAL_SHIPPING,
+        ]
+        if (
+            package_type in heavy_package_types
+            or international_shipping in heavy_international_shipping
+        ):
+            return ShippingClasses.HEAVY
+        return ShippingClasses.STANDARD
 
     def product_shipping_classes(self):
         """Return a dict of {Product SKU: shipping class}."""
@@ -133,15 +118,20 @@ class SetShippingClasses:
             product_shipping_classes[row[self.CC_RANGE_SKU_COLUMN]] = shipping_class
         return product_shipping_classes
 
-    def output_data(self, product_shipping_classes):
+    def get_update_row(self, row):
+        """Return a CSV row to update the shipping class if necessary, otherwise None."""
+        shipping_class = self.shipping_class_lookup[row[WoocommerceExport.SKU]]
+        if row[WoocommerceExport.SHIPPING_CLASS] == shipping_class:
+            return None
+        return [row[WoocommerceExport.ID], shipping_class]
+
+    def output_data(self):
         """Return update CSV data as a list of lists of values."""
-        data = [
-            [
-                row[WoocommerceExport.ID],
-                product_shipping_classes[row[WoocommerceExport.SKU]],
-            ]
-            for row in self.WC_export
-        ]
+        data = []
+        for row in self.WC_export:
+            update_row = self.get_update_row(row)
+            if update_row is not None:
+                data.append(update_row)
         return data
 
     def write_status(self, output_data):
