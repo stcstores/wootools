@@ -1,0 +1,10 @@
+"""Wootools."""
+
+__title__ = "wootools"
+__description__ = "Tools for managing a Woocommerce website."
+__url__ = ""
+__version__ = "0.0.1"
+__author__ = "Luke Shiner"
+__author_email__ = "luke@lukeshiner.com"
+__license__ = "MIT"
+__copyright__ = "Copyright 2018 Luke Shiner"
