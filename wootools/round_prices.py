@@ -8,6 +8,11 @@ import click
 from .woocommerce_export import WoocommerceExport
 
 
+def format_price(price):
+    """Return a correctly formatted price."""
+    return "%.2f" % price
+
+
 class RoundPrices:
     """Round prices rounds the price of products."""
 
@@ -17,20 +22,19 @@ class RoundPrices:
 
     OUTPUT_HEADER = [WoocommerceExport.ID, WoocommerceExport.PRICE]
 
-    PENCE_VALUES = [25, 49, 75, 99]
+    PENCE_VALUES = {25, 49, 75, 99}
 
     def __init__(self, woo_export_path):
         """Calculate rounded prices and write a csv to make the changes to stdout."""
         self.WC_export = WoocommerceExport(woo_export_path)
         self.max_price_delta = self.caluclate_max_price_delta()
         output_data = self.output_data()
-        exit()
         self.write_status(output_data)
         self.write_output(output_data)
 
     def round_delta(self, pence):
         """Return the number of pence to add or subtract to reach the nearest valid price."""
-        prices = self.PENCE_VALUES
+        prices = list(self.PENCE_VALUES)
         prices.append(max(prices) - 100)
         rounded = min(self.PENCE_VALUES, key=lambda x: abs(x - pence))
         if rounded < 0:
@@ -71,10 +75,11 @@ class RoundPrices:
             return None
         if price < 0.01:
             return None
-        price = float(price)
+        if int(format_price(price).split(".")[1]) in self.PENCE_VALUES:
+            return None
         new_price = self.round_price(price)
         self.validate_new_price(price, new_price)
-        return str(new_price)
+        return format_price(new_price)
 
     def validate_new_price(self, old_price, new_price):
         """Check a rounded price is valid and has not changed by too great an amount."""
