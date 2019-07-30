@@ -2,8 +2,10 @@
 
 import click
 
+from . import exceptions
 from .add_disclaimers import AddDisclaimers
 from .fix_categories import FixCategories
+from .product_update import create_update_file
 from .round_prices import RoundPrices
 from .set_shipping_classes import SetShippingClasses
 
@@ -38,7 +40,7 @@ def fix_categories(ctx, export_file_path):
 
     - Removes the "Uncategorized" category from products with other categories set.
     """
-    FixCategories(export_file_path)
+    create_update_file(FixCategories, export_file_path)
 
 
 @cli.command()
@@ -68,7 +70,13 @@ def set_shipping_classes(ctx, woo_export_path, cc_export_path):
     Sets the correct shipping classes for products acording to their "Package Type" and
     "International Shipping" settings in Cloud Commerce.
     """
-    SetShippingClasses(woo_export_path=woo_export_path, cc_export_path=cc_export_path)
+    try:
+        create_update_file(SetShippingClasses, woo_export_path, cc_export_path)
+    except exceptions.ProductNotFoundInCloudCommerceExport as e:
+        click.echo(
+            f"The product with SKU {e.SKU} was not found in the Cloud Commerce Export.",
+            err=True,
+        )
 
 
 @cli.command()
@@ -86,7 +94,7 @@ def add_disclaimers(ctx, export_file_path):
     Writes an import file to STDOUT that will update add the disclaimer to products with
     the Knives category.
     """
-    AddDisclaimers(export_file_path)
+    create_update_file(AddDisclaimers, export_file_path)
 
 
 @cli.command()
@@ -104,4 +112,4 @@ def round_prices(ctx, export_file_path):
     Takes a current Product Export from a woocommerce site and writes an import file to
     STDOUT that will round all product prices such that the end with .25, .49, .75. .99.
     """
-    RoundPrices(export_file_path)
+    create_update_file(RoundPrices, export_file_path)

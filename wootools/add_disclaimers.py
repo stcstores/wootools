@@ -1,17 +1,12 @@
 """AddDisclaimers adds disclaimers to the descriptions of products in the knives category."""
 
-import csv
-import sys
-
-import click
-
+from .product_update import ProductUpdate
 from .woocommerce_export import WoocommerceExport
 
 
-class AddDisclaimers:
+class AddDisclaimers(ProductUpdate):
     """AddDisclaimers adds disclaimers to the descriptions of products in the knives category."""
 
-    UNCATEGORIZED = "Uncategorized"
     IMPORT_HEADER = [WoocommerceExport.ID, WoocommerceExport.DESCRIPTION]
 
     disclaimer_categories = ["Knives"]
@@ -36,48 +31,27 @@ class AddDisclaimers:
         ]
     )
 
-    def __init__(self, export_file_path):
-        """Write a CSV file to make the necessary changes to stdout."""
-        self.export = WoocommerceExport(export_file_path)
-        output_data = self.create_import_data()
-        self.write_status(output_data)
-        self.write_output(output_data)
-
-    def process_export_row(self, row):
+    @classmethod
+    def process_export_row(cls, row):
         """Return an update row if an update is required, otherwise return None."""
-        if any(_ in row[self.export.CATEGORIES] for _ in self.disclaimer_categories):
-            description = self.add_disclaimer(row[self.export.DESCRIPTION])
+        if any(
+            _ in row[WoocommerceExport.CATEGORIES] for _ in cls.disclaimer_categories
+        ):
+            description = cls.add_disclaimer(row[WoocommerceExport.DESCRIPTION])
             if description is not None:
-                return [row[self.export.ID], description]
+                return [row[WoocommerceExport.ID], description]
         return None
 
-    def add_disclaimer(self, description):
+    @classmethod
+    def add_disclaimer(cls, description):
         """Add the disclaimer to a description."""
-        if f'<div class="{self.html_class}">' not in description:
-            clean_description = self.clean_description(description)
-            updated_description = clean_description + self.disclaimer
+        if f'<div class="{cls.html_class}">' not in description:
+            clean_description = cls.clean_description(description)
+            updated_description = clean_description + cls.disclaimer
             return updated_description
         return None
 
-    def clean_description(self, description):
+    @staticmethod
+    def clean_description(description):
         """Return the description with properly formatted newlines."""
         return description.replace("\n", "\\n")
-
-    def create_import_data(self):
-        """Return the update CSV as lists of row data."""
-        import_data = []
-        for export_row in self.export:
-            import_row = self.process_export_row(export_row)
-            if import_row is not None:
-                import_data.append(import_row)
-        return import_data
-
-    def write_status(self, output_data):
-        """Write completion message to stderr."""
-        click.echo(f"{len(output_data)} update rows.", err=True)
-
-    def write_output(self, import_data):
-        """Write the update CSV to stdout."""
-        f = csv.writer(sys.stdout)
-        f.writerow(self.IMPORT_HEADER)
-        f.writerows(import_data)
