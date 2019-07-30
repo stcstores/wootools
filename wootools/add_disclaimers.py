@@ -12,14 +12,15 @@ class AddDisclaimers:
     """AddDisclaimers adds disclaimers to the descriptions of products in the knives category."""
 
     UNCATEGORIZED = "Uncategorized"
-    IMPORT_HEADER = [WoocommerceExport.ID, WoocommerceExport.CATEGORIES]
+    IMPORT_HEADER = [WoocommerceExport.ID, WoocommerceExport.DESCRIPTION]
 
     disclaimer_categories = ["Knives"]
-    header = "DISCLAIMER:"
+    html_class = "disclaimer"
     disclaimer = "\\n".join(
         [
+            f'<div class="{html_class}">',
             "<br>",
-            f"<p>{header}</p>",
+            "<p>DISCLAIMER:</p>",
             "<p>You must be 18 years or older in order to purchase this product.</p>",
             (
                 "<p>It is the buyers obligation that they ensure they know their states "
@@ -31,6 +32,7 @@ class AddDisclaimers:
                 "or older and understand rules and regulations in relation to knives in "
                 "your own state or territory.</p>"
             ),
+            "</div>",
         ]
     )
 
@@ -51,7 +53,7 @@ class AddDisclaimers:
 
     def add_disclaimer(self, description):
         """Add the disclaimer to a description."""
-        if self.header not in description:
+        if f'<div class="{self.html_class}">' not in description:
             clean_description = self.clean_description(description)
             updated_description = clean_description + self.disclaimer
             return updated_description
