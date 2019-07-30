@@ -32,11 +32,11 @@ class ProductUpdate:
         """Return an updated CSV row if updates are necessary, otherwise return None."""
         raise NotImplementedError
 
-    def create_import_data(self, export):
+    def create_import_data(self, export, *args, **kwargs):
         """Return CSV rows as a list of lists of values."""
         import_data = []
         for export_row in export:
-            import_row = self.process_export_row(export_row)
+            import_row = self.process_export_row(export_row, *args, **kwargs)
             if import_row is not None:
                 import_data.append(import_row)
         return import_data
@@ -71,4 +71,9 @@ class ProductUpdateWithCloudCommerceExport(ProductUpdate):
         for row in self.inventory:
             self.CC_ROWS[row["VAR_SKU"]] = row
             self.CC_ROWS[row["RNG_SKU"]] = row
-        super().__init__(woo_export_path)
+        self.export = WoocommerceExport(woo_export_path)
+        self.import_data = self.create_import_data(self.export, self.CC_ROWS)
+
+    def process_export_row(self, row, lookup):
+        """Return an updated CSV row if updates are necessary, otherwise return None."""
+        raise NotImplementedError

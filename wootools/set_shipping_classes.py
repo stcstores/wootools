@@ -38,13 +38,14 @@ class SetShippingClasses(ProductUpdateWithCloudCommerceExport):
 
     IMPORT_HEADER = [WoocommerceExport.ID, WoocommerceExport.SHIPPING_CLASS]
 
-    def process_export_row(self, row):
+    @classmethod
+    def process_export_row(cls, row, lookup):
         """Return a CSV row to update the shipping class if necessary, otherwise None."""
         sku = row[WoocommerceExport.SKU]
         if not sku:
             return None
-        package_types = self.get_package_types(sku)
-        shipping_class = self.get_shipping_class(*package_types)
+        package_types = cls.get_package_types(sku, lookup)
+        shipping_class = cls.get_shipping_class(*package_types)
         if row[WoocommerceExport.SHIPPING_CLASS] == shipping_class:
             return None
         return [row[WoocommerceExport.ID], shipping_class]
@@ -69,26 +70,29 @@ class SetShippingClasses(ProductUpdateWithCloudCommerceExport):
         """Return a formatted shipping class name."""
         return " - ".join((package_type, international_shipping))
 
-    def get_package_type(self, row):
+    @classmethod
+    def get_package_type(cls, row):
         """Return the package type for a Cloud Commerce Product Export row."""
-        SKU = row[self.CC_SKU_COLUMN]
-        package_type = row[self.CC_PACKAGE_TYPE_COLUMN]
+        SKU = row[cls.CC_SKU_COLUMN]
+        package_type = row[cls.CC_PACKAGE_TYPE_COLUMN]
         if not package_type:
             raise Exception(f'No Package type set for "{SKU}"')
         return package_type
 
-    def get_international_shipping(self, row):
+    @classmethod
+    def get_international_shipping(cls, row):
         """Return the international shipping for a Cloud Commerce Product Export row."""
-        SKU = row[self.CC_SKU_COLUMN]
-        international_shipping = row[self.CC_INTERNATIONAL_SHIPPING_COLUMN]
+        SKU = row[cls.CC_SKU_COLUMN]
+        international_shipping = row[cls.CC_INTERNATIONAL_SHIPPING_COLUMN]
         if not international_shipping:
             raise Exception(f'No International Shipping set for "{SKU}"')
         return international_shipping
 
-    def get_package_types(self, SKU):
+    @classmethod
+    def get_package_types(cls, SKU, lookup):
         """Return the pacage types for a product."""
         try:
-            cc_row = self.CC_ROWS[SKU]
+            cc_row = lookup[SKU]
         except KeyError:
             raise ProductNotFoundInCloudCommerceExport(SKU)
-        return (self.get_package_type(cc_row), self.get_international_shipping(cc_row))
+        return (cls.get_package_type(cc_row), cls.get_international_shipping(cc_row))
