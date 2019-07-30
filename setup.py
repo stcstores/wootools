@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Setup for wootools."""
 
-import os
+from pathlib import Path
 
 import setuptools
 
@@ -10,10 +10,10 @@ NAME = "wootools"
 with open("README.rst", "r") as readme:
     long_description = readme.read()
 
-here = os.path.abspath(os.path.dirname(__file__))
+here = Path(__file__).parent
 
 about = {}
-with open(os.path.join(here, NAME, "__version__.py"), "r") as f:
+with open(here / NAME / "__version__.py", "r") as f:
     exec(f.read(), about)
 
 setuptools.setup(
