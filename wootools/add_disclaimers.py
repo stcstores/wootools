@@ -13,17 +13,17 @@ class AddDisclaimers(ProductUpdate):
     html_class = "disclaimer"
     disclaimer = "\\n".join(
         [
-            f'<div class="{html_class}">',
-            "<br>",
-            "<p>DISCLAIMER:</p>",
-            "<p>You must be 18 years or older in order to purchase this product.</p>",
+            "\\n<br>",
+            f"<div class='{html_class}'>",
+            "\t<p>DISCLAIMER:</p>",
+            "\t<p>You must be 18 years or older in order to purchase this product.</p>",
             (
-                "<p>It is the buyers obligation that they ensure they know their states "
+                "\t<p>It is the buyers obligation that they ensure they know their states "
                 "rules and regulation in regards to knives and to make sure they are "
                 "not breaking the law by purchasing knives.</p>"
             ),
             (
-                "<p>By purchasing from this website and you agree that you are 18 years "
+                "\t<p>By purchasing from this website and you agree that you are 18 years "
                 "or older and understand rules and regulations in relation to knives in "
                 "your own state or territory.</p>"
             ),
@@ -45,13 +45,7 @@ class AddDisclaimers(ProductUpdate):
     @classmethod
     def add_disclaimer(cls, description):
         """Add the disclaimer to a description."""
-        if f'<div class="{cls.html_class}">' not in description:
-            clean_description = cls.clean_description(description)
-            updated_description = clean_description + cls.disclaimer
+        if f"<div class='{cls.html_class}'>" not in description:
+            updated_description = description.replace("\n", "\\n") + cls.disclaimer
             return updated_description
         return None
-
-    @staticmethod
-    def clean_description(description):
-        """Return the description with properly formatted newlines."""
-        return description.replace("\n", "\\n")
