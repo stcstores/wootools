@@ -18,6 +18,12 @@ class AddDisclaimers(ProductUpdate):
             "\t<p>DISCLAIMER:</p>",
             "\t<p>You must be 18 years or older in order to purchase this product.</p>",
             (
+                "\t<p>ID will be required on delivery to the UK. The product will not "
+                "be delivered to anyone under the age of 18 or without valid proof of "
+                "age. The buyer is responsible for any additional shipping charge "
+                "incurred if ID is not available.</p>"
+            ),
+            (
                 "\t<p>It is the buyers obligation that they ensure they know their states "
                 "rules and regulation in regards to knives and to make sure they are "
                 "not breaking the law by purchasing knives.</p>"
