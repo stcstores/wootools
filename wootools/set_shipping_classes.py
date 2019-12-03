@@ -33,6 +33,14 @@ class ShippingClasses:
     ALL = [STANDARD, HEAVY]
 
 
+class Categories:
+    """Shipping classes based on product category."""
+
+    KNIFE = "Knife"
+    KNIVES = "Sports and Leisure > Knives"
+    categories = {KNIVES: KNIFE}
+
+
 class SetShippingClasses(ProductUpdateWithCloudCommerceExport):
     """Write a CSV file to correct product shipping classes to stdout."""
 
@@ -45,8 +53,16 @@ class SetShippingClasses(ProductUpdateWithCloudCommerceExport):
         if not sku:
             return None
         package_types = cls.get_package_types(sku, lookup)
-        shipping_class = cls.get_shipping_class(*package_types)
-        if row[WoocommerceExport.SHIPPING_CLASS] == shipping_class:
+        existing_shipping_class = row[WoocommerceExport.SHIPPING_CLASS]
+        categories = row[WoocommerceExport.CATEGORIES].split(",")
+        category = row[WoocommerceExport.CATEGORIES]
+        shipping_class = None
+        for category in categories:
+            if category in Categories.categories:
+                shipping_class = Categories.categories[category]
+        if shipping_class is None:
+            shipping_class = cls.get_shipping_class(*package_types)
+        if shipping_class == existing_shipping_class:
             return None
         return [row[WoocommerceExport.ID], shipping_class]
 
@@ -92,6 +108,10 @@ class SetShippingClasses(ProductUpdateWithCloudCommerceExport):
     def get_package_types(cls, SKU, lookup):
         """Return the pacage types for a product."""
         try:
+            if "RNG" in SKU:
+                SKU = "_".join(SKU.split("_")[:2])
+            else:
+                SKU = SKU.split("_")[0]
             cc_row = lookup[SKU]
         except KeyError:
             raise ProductNotFoundInCloudCommerceExport(SKU)

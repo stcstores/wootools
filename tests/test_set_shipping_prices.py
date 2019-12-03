@@ -84,6 +84,7 @@ def test_unchanged_row():
         WoocommerceExport.ID: pid,
         WoocommerceExport.SKU: sku,
         WoocommerceExport.SHIPPING_CLASS: ShippingClasses.HEAVY,
+        WoocommerceExport.CATEGORIES: "Sports",
     }
     inv_data = {
         sku: {
@@ -103,6 +104,7 @@ def test_changed_row():
         WoocommerceExport.ID: pid,
         WoocommerceExport.SKU: sku,
         WoocommerceExport.SHIPPING_CLASS: ShippingClasses.STANDARD,
+        WoocommerceExport.CATEGORIES: "Sports",
     }
     inv_data = {
         sku: {
